@@ -1,15 +1,17 @@
 import asyncio
 import numpy as np
 import os
+import subprocess as sp
 import sys
 import tqdm
 import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
 
 
+IS_WINDOWS = os.name == 'nt'
 DESKTOP_DIR_PATH = (
 	os.path.join(os.environ['USERPROFILE'], 'Desktop')
-	if os.name == 'nt' else
+	if IS_WINDOWS else
 	os.path.join(os.environ['HOME'], 'Desktop'))
 
 
@@ -67,7 +69,7 @@ async def draw_arc(
 	update_progress_bar()
 
 
-async def main_coro(size: int = 1024):
+async def main_coro(gif_size: int):
 	colors = (
 		(255, 0, 0),
 		(255, 127, 0),
@@ -89,11 +91,11 @@ async def main_coro(size: int = 1024):
 	gif: list[Image.Image] = []
 	angles = 360//colors_len
 
-	with Image.new('RGB', (size*2, size*2), (0, 0, 0)) as img:
-		radius = size//2
+	with Image.new('RGB', (gif_size*2, gif_size*2), (0, 0, 0)) as img:
+		radius = gif_size//2
 		init_progress_bar(colors_len)
 		tasks = tuple(
-			draw_arc(img, size, size, radius, colors[i], angles, i)
+			draw_arc(img, gif_size, gif_size, radius, colors[i], angles, i)
 			for i in range(0, colors_len))
 		await asyncio.gather(*tasks)
 		img = await swirl_img(img, 2, radius)
@@ -103,7 +105,7 @@ async def main_coro(size: int = 1024):
 		for i in range(colors_len):
 			gif.append(img
 				.rotate(360//colors_len * i, resample=Image.Resampling.BICUBIC)
-				.resize((size, size), resample=Image.Resampling.LANCZOS)
+				.resize((gif_size, gif_size), resample=Image.Resampling.LANCZOS)
 				.quantize(method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG))
 			update_progress_bar()
 		close_progress_bar()
@@ -119,7 +121,10 @@ async def main_coro(size: int = 1024):
 		save_all=True)
 	sys.stdout.write(f'Saved GIF as: {gif_path}\n')
 	sys.stdout.flush()
-	os.system(f'start "" "{gif_path}"')
+	sp.run(
+		['cmd.exe', '/C', 'start', '', gif_path]
+		if IS_WINDOWS else
+		['xdg-open', gif_path])
 
 
 def main() -> int:
