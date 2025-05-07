@@ -7,6 +7,6 @@ Requires: `Python 3.11+`
 Run with:
 
 ```sh
-pip install -e requirements.txt
+pip install -r requirements.txt
 python src/main.py
 ```
